@@ -61,6 +61,49 @@ try:
     snapshots = spark.sql("SELECT * FROM demo_db.users.snapshots")
     snapshots.show()
     
+    # Time Travel Queries - Query different snapshots
+    print("\n🕰️ TIME TRAVEL DEMONSTRATION:")
+    
+    # Get snapshot IDs for time travel
+    snapshot_data = snapshots.collect()
+    if len(snapshot_data) >= 2:
+        # Query the first snapshot (original data: Alice, Bob)
+        first_snapshot_id = snapshot_data[0]['snapshot_id']
+        print(f"📊 Querying snapshot {first_snapshot_id} (original data):")
+        spark.sql(f"SELECT * FROM demo_db.users VERSION AS OF {first_snapshot_id}").show()
+        
+        # Query the second snapshot (with Charlie added)
+        second_snapshot_id = snapshot_data[1]['snapshot_id']
+        print(f"📊 Querying snapshot {second_snapshot_id} (with Charlie):")
+        spark.sql(f"SELECT * FROM demo_db.users VERSION AS OF {second_snapshot_id}").show()
+    
+    # Time travel by timestamp (if you know the approximate time)
+    print("\n⏰ Time travel by timestamp (last 5 minutes):")
+    try:
+        spark.sql("SELECT * FROM demo_db.users VERSION AS OF '2025-10-18 19:10:00'").show()
+    except:
+        print("   (Timestamp-based time travel requires exact timestamp)")
+    
+    # Compare snapshots side by side
+    print("\n🔄 Comparing snapshots:")
+    if len(snapshot_data) >= 2:
+        print("Snapshot 1 (original):")
+        spark.sql(f"SELECT * FROM demo_db.users VERSION AS OF {snapshot_data[0]['snapshot_id']}").show()
+        print("Snapshot 2 (with additions):")
+        spark.sql(f"SELECT * FROM demo_db.users VERSION AS OF {snapshot_data[1]['snapshot_id']}").show()
+    
+    # Show history of changes
+    print("\n📜 Table history:")
+    history = spark.sql("SELECT * FROM demo_db.users.history")
+    history.show()
+    
+    # Rollback example (creates a new snapshot)
+    print("\n🔄 Rollback to first snapshot (creates new snapshot):")
+    if len(snapshot_data) >= 1:
+        spark.sql(f"CALL spark_catalog.system.rollback_to_snapshot('demo_db.users', {snapshot_data[0]['snapshot_id']})")
+        print("📊 Data after rollback:")
+        spark.sql("SELECT * FROM demo_db.users").show()
+    
     # Show the actual Iceberg folder structure that was created
     print(f"\n📁 Actual Iceberg folder structure created:")
     print(f"   {warehouse_path}/")

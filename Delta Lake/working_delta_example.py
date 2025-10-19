@@ -44,9 +44,44 @@ print("✅ Record updated successfully!")
 print("📊 Data after update:")
 spark.sql("SELECT * FROM delta_table").show()
 
-# Time travel (query by version)
+# Time Travel Queries - Query different versions
+print("\n🕰️ TIME TRAVEL DEMONSTRATION:")
+
+# Show table history
+print("📜 Table history:")
+history = spark.sql("DESCRIBE HISTORY delta_table")
+history.show()
+
+# Time travel by version number
 print("📊 Time travel - version 0 (original data):")
 spark.sql("SELECT * FROM delta_table VERSION AS OF 0").show()
+
+print("📊 Time travel - version 1 (after update):")
+spark.sql("SELECT * FROM delta_table VERSION AS OF 1").show()
+
+# Time travel by timestamp (if available)
+print("\n⏰ Time travel by timestamp:")
+try:
+    # Get the timestamp from history
+    history_data = history.collect()
+    if len(history_data) > 0:
+        timestamp = history_data[0]['timestamp']
+        print(f"📊 Querying data as of {timestamp}:")
+        spark.sql(f"SELECT * FROM delta_table TIMESTAMP AS OF '{timestamp}'").show()
+except Exception as e:
+    print(f"   (Timestamp-based time travel: {e})")
+
+# Compare versions side by side
+print("\n🔄 Comparing versions:")
+print("Version 0 (original):")
+spark.sql("SELECT * FROM delta_table VERSION AS OF 0").show()
+print("Version 1 (after update):")
+spark.sql("SELECT * FROM delta_table VERSION AS OF 1").show()
+
+# Show Delta Lake specific features
+print("\n🔍 Delta Lake specific features:")
+print("📊 Current table statistics:")
+spark.sql("DESCRIBE DETAIL delta_table").show()
 
 # Show the actual Delta Lake folder structure
 print(f"\n📁 Actual Delta Lake folder structure created:")
